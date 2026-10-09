@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Launchpad X — Control Deck</title>
+<style>
+  :root{
+    --bg: #17181b;
+    --panel: #1e2024;
+    --panel-line: #2c2f34;
+    --ink: #e9e8e4;
+    --ink-dim: #8b8d92;
+    --amber: #e8a33d;
+    --teal: #3eb8a8;
+    --pad-off: #2a2d32;
+    --pad-border: #383b41;
+    --mono: "SF Mono", "Consolas", "Menlo", monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    padding: 32px 24px 60px;
+  }
+  h1{
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin: 0 0 4px;
+  }
+  .sub{
+    color: var(--ink-dim);
+    font-size: 13px;
+    margin: 0 0 28px;
+    max-width: 640px;
+    line-height: 1.5;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    max-width: 1040px;
+  }
+  @media (max-width: 860px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .panel + .panel{ margin-top: 18px; }
+  .panel h2{
+    font-size: 12px;
+    text-transform: none;
+    color: var(--ink-dim);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  .row{ display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+  select, button{
+    background: #26282d;
+    color: var(--ink);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 13px;
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+  select:hover, button:hover{ border-color: #4a4d54; }
+  button.primary{
+    background: var(--amber);
+    color: #201503;
+    border-color: var(--amber);
+    font-weight: 600;
+  }
+  button.primary:hover{ filter: brightness(1.08); }
+  button:disabled{ opacity: 0.4; cursor: not-allowed; }
+  .status-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: #6b6e74; display:inline-block; margin-right:6px;
+  }
+  .status-dot.live{ background:#5fd07a; box-shadow:0 0 6px #5fd07a88; }
+  .status-line{ font-size:12.5px; color: var(--ink-dim); margin-top:10px; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .pad{
+    aspect-ratio: 1;
+    border-radius: 6px;
+    background: var(--pad-off);
+    border: 1px solid var(--pad-border);
+    cursor:pointer;
+    position:relative;
+    display:flex;
+    align-items:flex-end;
+    justify-content:flex-start;
+    transition: transform 0.05s ease;
+  }
+  .pad:hover{ border-color:#565961; }
+  .pad:active{ transform: scale(0.94); }
+  .pad .lbl{
+    font-family: var(--mono);
+    font-size: 9px;
+    color: rgba(255,255,255,0.35);
+    padding: 3px 4px;
+  }
+  .pad.lit .lbl{ color: rgba(0,0,0,0.55); }
+
+  .mode-btns{ display:flex; gap:6px; margin-bottom:14px; }
+  .mode-btns button{ flex:1; }
+  .mode-btns button.active{
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #06201d;
+    font-weight:600;
+  }
+
+  .palette{
+    display:grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .swatch{
+    aspect-ratio: 1;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .swatch.selected{ outline: 2px solid #fff; outline-offset: 1px; }
+
+  .selected-colour{
+    display:flex; align-items:center; gap:10px; margin-top:12px;
+  }
+  .selected-colour .chip{
+    width:28px; height:28px; border-radius:6px; border:1px solid var(--panel-line);
+  }
+  .selected-colour .info{ font-family: var(--mono); font-size:12px; color: var(--ink-dim); }
+
+  .log{
+    height: 220px;
+    overflow-y: auto;
+    background: #0f1012;
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #b7d9c9;
+  }
+  .log .in{ color: #8fc7ff; }
+  .log .out{ color: #e8a33d; }
+  .log .sys{ color: var(--ink-dim); }
+
+  .field-note{
+    font-size: 11.5px;
+    color: var(--ink-dim);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  code{
+    background:#0f1012;
+    padding: 1px 5px;
+    border-radius:4px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Launchpad X — Control Deck</h1>
+<p class="sub">
+  A minimal offline panel for talking to a Launchpad X over Web MIDI. Connect the device, pick a lighting
+  mode and colour, then click pads to send real Note On messages — or watch incoming presses in the log.
+  Requires Chrome or Edge (Web MIDI isn't supported in Firefox or Safari).
+</p>
+
+<div class="layout">
+  <div>
+    <div class="panel">
+      <h2>Connection</h2>
+      <div class="row">
+        <select id="outSelect"><option>Requesting MIDI access…</option></select>
+        <select id="inSelect"><option>—</option></select>
+        <button id="connectBtn" class="primary">Connect</button>
+      </div>
+      <div class="status-line"><span id="statusDot" class="status-dot"></span><span id="statusText">Not connected</span></div>
+    </div>
+
+    <div class="panel">
+      <h2>Surface</h2>
+      <div class="row" style="margin-bottom:14px;">
+        <button id="progModeBtn">Enter Programmer Mode</button>
+        <button id="liveModeBtn">Return to Live Mode</button>
+        <button id="clearBtn">Clear All Pads</button>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="field-note">
+        Pad addressing follows <code>row×10 + column</code>, row 1 at the bottom — the same scheme used
+        throughout Programmer mode. Hover a pad to see its decimal / hex note number.
+      </p>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Lighting behaviour</h2>
+      <div class="mode-btns">
+        <button id="modeStatic" class="active" data-ch="0">Static</button>
+        <button id="modeFlash" data-ch="1">Flash</button>
+        <button id="modePulse" data-ch="2">Pulse</button>
+      </div>
+      <h2>Colour (velocity 0–127)</h2>
+      <div class="palette" id="palette"></div>
+      <div class="selected-colour">
+        <div class="chip" id="selChip"></div>
+        <div class="info" id="selInfo">— </div>
+      </div>
+      <p class="field-note">
+        This palette is an approximation for exploration — the exact 128 factory colours are the ones
+        shown on your device and in the manual's colour table.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Message log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYSEX_HEADER = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C];
+let midiAccess = null, outPort = null, inPort = null;
+let currentChannel = 0; // 0=static,1=flash,2=pulse
+let currentColour = 5;
+
+const logEl = document.getElementById('log');
+function log(msg, cls){
+  const line = document.createElement('div');
+  if(cls) line.className = cls;
+  line.textContent = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function toHexByte(n){ return n.toString(16).padStart(2,'0').toUpperCase()+'h'; }
+
+// ---- MIDI setup ----
+async function initMIDI(){
+  try{
+    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+    populatePorts();
+    midiAccess.onstatechange = populatePorts;
+  }catch(err){
+    document.getElementById('statusText').textContent = 'Web MIDI unavailable: ' + err.message;
+    log('Web MIDI request failed: ' + err.message, 'sys');
+  }
+}
+
+function populatePorts(){
+  const outSel = document.getElementById('outSelect');
+  const inSel = document.getElementById('inSelect');
+  outSel.innerHTML = ''; inSel.innerHTML = '';
+
+  const outputs = [...midiAccess.outputs.values()];
+  const inputs  = [...midiAccess.inputs.values()];
+
+  if(outputs.length === 0) outSel.innerHTML = '<option>No MIDI outputs found</option>';
+  outputs.forEach(p=>{
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name;
+    if(/launchpad/i.test(p.name) && !/daw/i.test(p.name)) o.selected = true;
+    outSel.appendChild(o);
+  });
+
+  if(inputs.length === 0) inSel.innerHTML = '<option>No MIDI inputs found</option>';
+  inputs.forEach(p=>{
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name;
+    if(/launchpad/i.test(p.name) && !/daw/i.test(p.name)) o.selected = true;
+    inSel.appendChild(o);
+  });
+}
+
+document.getElementById('connectBtn').addEventListener('click', ()=>{
+  const outId = document.getElementById('outSelect').value;
+  const inId = document.getElementById('inSelect').value;
+  outPort = midiAccess.outputs.get(outId);
+  inPort = midiAccess.inputs.get(inId);
+
+  if(!outPort || !inPort){
+    log('Select valid input and output ports first.', 'sys');
+    return;
+  }
+  inPort.onmidimessage = handleIncoming;
+  document.getElementById('statusDot').classList.add('live');
+  document.getElementById('statusText').textContent = `Connected — ${outPort.name}`;
+  log(`Connected to ${outPort.name} / ${inPort.name}`, 'sys');
+});
+
+function sendSysex(dataAfterHeader){
+  if(!outPort) return log('Not connected.', 'sys');
+  const bytes = [...SYSEX_HEADER, ...dataAfterHeader, 0xF7];
+  outPort.send(bytes);
+  log('OUT sysex: ' + bytes.map(toHexByte).join(' '), 'out');
+}
+
+function sendNoteOn(channel, note, velocity){
+  if(!outPort) return log('Not connected.', 'sys');
+  const status = 0x90 | channel;
+  outPort.send([status, note, velocity]);
+  log(`OUT note_on ch${channel+1} note=${note} (${toHexByte(note)}) vel=${velocity}`, 'out');
+}
+
+function handleIncoming(e){
+  const [status, d1, d2] = e.data;
+  const type = status & 0xF0;
+  const channel = status & 0x0F;
+  if(type === 0x90){
+    const row = Math.floor(d1/10), col = d1%10;
+    log(`IN  note_on ch${channel+1} row=${row} col=${col} vel=${d2}`, 'in');
+    // mirror press on local grid for static channel presses
+    if(d2 > 0) paintPadLocal(d1, currentColour); else paintPadLocal(d1, 0);
+  } else if(type === 0xB0){
+    log(`IN  control_change cc=${d1} val=${d2}`, 'in');
+  } else {
+    log('IN  ' + [...e.data].map(toHexByte).join(' '), 'in');
+  }
+}
+
+// ---- Mode buttons ----
+document.getElementById('progModeBtn').addEventListener('click', ()=>{
+  sendSysex([0x0E, 0x01]);
+});
+document.getElementById('liveModeBtn').addEventListener('click', ()=>{
+  sendSysex([0x0E, 0x00]);
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  for(let row=1; row<=8; row++){
+    for(let col=1; col<=8; col++){
+      const note = row*10+col;
+      sendNoteOn(0, note, 0);
+      paintPadLocal(note, 0);
+    }
+  }
+});
+
+// ---- Lighting channel selector ----
+document.querySelectorAll('.mode-btns button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.mode-btns button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentChannel = parseInt(btn.dataset.ch, 10);
+  });
+});
+
+// ---- Build 8x8 grid (row 8 at top visually, row 1 at bottom) ----
+const gridEl = document.getElementById('grid');
+const padEls = {};
+for(let row=8; row>=1; row--){
+  for(let col=1; col<=8; col++){
+    const note = row*10+col;
+    const pad = document.createElement('div');
+    pad.className = 'pad';
+    pad.title = `row ${row}, col ${col} — decimal ${note}, hex ${toHexByte(note)}`;
+    const lbl = document.createElement('span');
+    lbl.className = 'lbl';
+    lbl.textContent = note;
+    pad.appendChild(lbl);
+    pad.addEventListener('click', ()=>{
+      sendNoteOn(currentChannel, note, currentColour);
+      paintPadLocal(note, currentColour);
+    });
+    gridEl.appendChild(pad);
+    padEls[note] = pad;
+  }
+}
+
+function velocityToRGB(v){
+  // Approximate palette: treat v as (hue-ish bucket * 8) + brightness step, for visual variety only.
+  if(v === 0) return null;
+  const hue = ((v * 47) % 360);
+  const light = 35 + ((v % 4) * 12);
+  return `hsl(${hue}, 70%, ${light}%)`;
+}
+
+function paintPadLocal(note, velocity){
+  const pad = padEls[note];
+  if(!pad) return;
+  const colour = velocityToRGB(velocity);
+  if(colour){
+    pad.style.background = colour;
+    pad.classList.add('lit');
+  } else {
+    pad.style.background = '';
+    pad.classList.remove('lit');
+  }
+}
+
+// ---- Colour palette strip ----
+const paletteEl = document.getElementById('palette');
+const selChip = document.getElementById('selChip');
+const selInfo = document.getElementById('selInfo');
+let swatchEls = [];
+
+for(let v=0; v<128; v++){
+  const sw = document.createElement('div');
+  sw.className = 'swatch';
+  sw.style.background = velocityToRGB(v) || '#000';
+  sw.title = `velocity ${v} (${toHexByte(v)})`;
+  sw.addEventListener('click', ()=>{
+    currentColour = v;
+    swatchEls.forEach(s=>s.classList.remove('selected'));
+    sw.classList.add('selected');
+    selChip.style.background = velocityToRGB(v);
+    selInfo.textContent = `velocity ${v}  ·  ${toHexByte(v)}`;
+  });
+  paletteEl.appendChild(sw);
+  swatchEls.push(sw);
+}
+swatchEls[5].classList.add('selected');
+selChip.style.background = velocityToRGB(5);
+selInfo.textContent = `velocity 5  ·  ${toHexByte(5)}`;
+
+initMIDI();
+</script>
+</body>
+</html>
